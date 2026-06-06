@@ -1,0 +1,16 @@
+# Generated data — regenerate with: python ingest.py
+data/
+chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Mac
+.DS_Store
+
+# Virtual environments
+venv/
+.venv/
