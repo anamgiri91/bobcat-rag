@@ -378,31 +378,30 @@ def _build_course_filter(course_digits: str) -> dict:
 def _build_combined_filter(
     prof: str | None,
     course_digits: str | None,
+    source: str | None = None,
 ) -> dict | None:
     """
-    Combine professor and course filters.
+    Combine professor, course, and source filters.
 
-    Cases:
-      professor + course -> AND filter
-      professor only     -> professor filter
-      course only        -> course filter
-      neither            -> no metadata filter
+    source values match the source_dir field stored in metadata:
+      "rmp", "coursicle", "reddit", "official"
     """
-    if prof and course_digits:
-        return {
-            "$and": [
-                {"professor": prof},
-                _build_course_filter(course_digits),
-            ]
-        }
+    conditions = []
 
     if prof:
-        return {"professor": prof}
+        conditions.append({"professor": prof})
 
     if course_digits:
-        return _build_course_filter(course_digits)
+        conditions.append(_build_course_filter(course_digits))
 
-    return None
+    if source:
+        conditions.append({"source_dir": source})
+
+    if not conditions:
+        return None
+    if len(conditions) == 1:
+        return conditions[0]
+    return {"$and": conditions}
 
 
 # ---------------------------------------------------------------------------
@@ -413,6 +412,7 @@ def retrieve(
     query: str,
     top_k: int = DEFAULT_TOP_K,
     db_path: str = "data/chroma_db",
+    source_filter: str | None = None,
 ) -> list[RetrievedChunk]:
     """
     Embed the query and return top-k most similar chunks.
@@ -421,6 +421,7 @@ def retrieve(
       - professor filter for single-professor queries
       - course filter when a CS course number is detected
       - combined AND filter when both professor and course are present
+      - optional source_filter ("rmp", "coursicle", "reddit", "official")
 
     For comparison queries, _extract_professor() returns None, so retrieval
     does not accidentally filter down to only one professor.
@@ -433,7 +434,7 @@ def retrieve(
 
     prof = _extract_professor(query)
     course_digits = _extract_course_number(query)
-    where_filter = _build_combined_filter(prof, course_digits)
+    where_filter = _build_combined_filter(prof, course_digits, source_filter)
 
     query_embedding = model.encode(query).tolist()
 
@@ -542,6 +543,7 @@ def retrieve_balanced(
     fetch_top_k: int = COMPARISON_TOP_K,
     cap_per_prof: int = CAP_PER_PROF,
     score_cutoff: float = SCORE_THRESHOLD,
+    source_filter: str | None = None,
 ) -> list[RetrievedChunk]:
     """
     Fetch a wide pool, then balance results per professor.
@@ -564,7 +566,7 @@ def retrieve_balanced(
       8. Pin the catalog chunk if a course number appears.
       9. Append up to 2 reddit chunks.
     """
-    pool = retrieve(query, top_k=fetch_top_k, db_path=db_path)
+    pool = retrieve(query, top_k=fetch_top_k, db_path=db_path, source_filter=source_filter)
 
     if not pool:
         return []

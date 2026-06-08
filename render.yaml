@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: bobcat-advisor
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false

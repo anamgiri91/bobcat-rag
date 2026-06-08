@@ -342,23 +342,28 @@ Instructions:
 # ---------------------------------------------------------------------------
 
 def answer_question(
-    query:   str,
-    db_path: str = "data/chroma_db",
-    top_k:   int = TOP_K,
+    query:         str,
+    db_path:       str = "data/chroma_db",
+    top_k:         int = TOP_K,
+    source_filter: str | None = None,
 ) -> tuple[str, str]:
     """
     Full pipeline: retrieve → format sources → generate answer.
     Sources are built from metadata before the LLM is called.
+
+    source_filter: optional ChromaDB source_dir value to restrict retrieval
+      "rmp"      → RateMyProfessors only
+      "coursicle" → Coursicle only
+      "reddit"   → Reddit only
+      "official" → course catalog only
+      None       → all sources (default)
     """
     from retrieve import retrieve, retrieve_balanced
 
-    # _is_comparison_query imported at top of file from retrieve.py.
-    # Comparison queries → balanced retrieval (equal slots per professor).
-    # Factual queries    → standard retrieval with professor + course filters.
     if _is_comparison_query(query):
-        chunks = retrieve_balanced(query, db_path=db_path)
+        chunks = retrieve_balanced(query, db_path=db_path, source_filter=source_filter)
     else:
-        chunks = retrieve(query, top_k=top_k, db_path=db_path)
+        chunks = retrieve(query, top_k=top_k, db_path=db_path, source_filter=source_filter)
 
     sources = format_sources(chunks)
     answer  = generate_answer(query, chunks)

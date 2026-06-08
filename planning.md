@@ -67,20 +67,8 @@ The majority of the corpus consists of student reviews from Rate My Professors, 
 For Reddit threads, comments will be grouped into chunks of approximately 300–500 words with a 50-word overlap to preserve discussion context between replies. Official sources such as the Texas State course catalog and faculty pages will be chunked by logical sections (one course description or faculty entry per chunk) because these documents are already concise.
 
 This strategy improves retrieval precision because semantic search can directly retrieve the specific student experiences most relevant to a user's question. For example, a query such as "Does Gholoom curve exams?" can retrieve individual reviews mentioning curves rather than an entire professor document containing hundreds of unrelated reviews. The smaller chunk size also improves embedding quality and reduces irrelevant information returned during retrieval.
----
 
-2. Professor-Themed Chunking
 
-**Chunk size:**
-300–600 words
-**Overlap:**
-50 words
-**Reasoning:**
-The majority of the corpus consists of student reviews from Rate My Professors, Reddit discussions, and other review platforms. Since each review typically expresses a complete opinion about a professor, course, grading style, exams, projects, or office hours, splitting reviews further would risk losing important context. Therefore, each individual review will be stored as a separate chunk whenever possible.
-
-For Reddit threads, comments will be grouped into chunks of approximately 300–500 words with a 50-word overlap to preserve discussion context between replies. Official sources such as the Texas State course catalog and faculty pages will be chunked by logical sections (one course description or faculty entry per chunk) because these documents are already concise.
-
-This strategy improves retrieval precision because semantic search can directly retrieve the specific student experiences most relevant to a user's question. For example, a query such as "Does Gholoom curve exams?" can retrieve individual reviews mentioning curves rather than an entire professor document containing hundreds of unrelated reviews. The smaller chunk size also improves embedding quality and reduces irrelevant information returned during retrieval.
 ---
 
 ## Retrieval Approach
@@ -244,3 +232,22 @@ Milestone 5 — Generation and Interface:
 I will use OpenAI Codex to implement the generation pipeline and user interface. I will provide the Retrieval Approach, Evaluation Plan, and Pipeline Diagram sections from this planning document. I will ask Codex to generate code that combines retrieved chunks with the user's question, sends the context to an LLM, and generates a final answer. I will also ask it to create a simple command-line interface that allows users to ask questions about Texas State Computer Science professors.
 
 I will verify the implementation by testing the five evaluation questions and comparing the generated responses against the expected answers. I will also inspect the retrieved context to ensure that the generated answers are grounded in the retrieved documents rather than unsupported claims.
+
+
+---
+
+## Stretch Feature: Metadata Filtering
+
+**What it does:**
+Lets users filter retrieved chunks by source (RateMyProfessors, Coursicle, Reddit) and by course number directly from the Gradio UI. Instead of searching across all 478 chunks, the retrieval only searches chunks that match the selected filters.
+
+**Why this is useful:**
+A student who only wants to see RMP reviews — because they trust that source more — shouldn't have to read Coursicle results mixed in. Similarly, a student asking about CS2308 specifically shouldn't get reviews about the same professor teaching a different course.
+
+**How it works:**
+Each chunk already has `source` and `course` fields stored in ChromaDB metadata from ingestion. The Gradio UI will get a source dropdown (All / RateMyProfessors / Coursicle / Reddit) and a course number text box. These values get passed into `retrieve.py` and added to the existing `_build_combined_filter()` function as additional `$and` conditions on the ChromaDB query.
+
+**What I need to change:**
+- `app.py` — add source dropdown and course filter text box to the Gradio layout, pass values to `handle_question()`
+- `retrieve.py` — update `_build_combined_filter()` to accept an optional source filter and thread it through `retrieve()` and `retrieve_balanced()`
+- No changes needed to chunking, embedding, or generation
