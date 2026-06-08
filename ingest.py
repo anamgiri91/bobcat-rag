@@ -9,22 +9,26 @@ those responsibilities from chunker.py and cleaner.py respectively.
 Pipeline steps:
   1. Walk documents/<subdir>/*.txt
   2. Route each subdirectory to the correct chunker  (chunker.py)
-  3. Deduplicate chunks by content hash
+  3. Deduplicate chunks — two stages (see below)
   4. Run all cleaning passes                         (cleaner.py)
   5. Save to JSONL and/or upsert into ChromaDB
 
+DEDUPLICATION
+-------------
+Stage A — full-text MD5 hash:
+  Catches exact duplicates where the entire chunk text is byte-for-byte
+  identical. This is the only dedup stage now.
+
+  Stage B (cross-source body fingerprint) was removed because it was
+  collapsing reviews from coursicle/ and rmp/ that shared the same text
+  but carried different metadata (grade, date, year level, major). Those
+  differences are useful context for the LLM, so we keep both copies.
+
 Usage
 -----
-  # Basic — produces chunks.jsonl in the current directory
   python ingest.py --documents-dir documents
-
-  # Preview 5 chunks without saving
   python ingest.py --documents-dir documents --preview 5
-
-  # Save to a specific path
   python ingest.py --documents-dir documents --out output/chunks.jsonl
-
-  # Also load into ChromaDB
   python ingest.py --documents-dir documents --out chunks.jsonl --chroma
 """
 
@@ -47,8 +51,7 @@ def ingest_all(documents_dir: Path) -> list[dict]:
     Parameters
     ----------
     documents_dir : Path
-        Path to the documents/ folder, e.g.:
-        ~/Desktop/ai201-project1-unofficial-guide/documents
+        Path to the documents/ folder.
 
     Returns
     -------
@@ -79,26 +82,35 @@ def ingest_all(documents_dir: Path) -> list[dict]:
             print(f"  {path.name:<30} {len(file_chunks):>4} chunks")
             raw_chunks.extend(file_chunks)
 
-    # --- Step 3: deduplicate by content hash --------------------------------
-    # The same review often appears in both coursicle/ and rmp/.
-    # The MD5 id is identical for both copies, so the second is skipped.
-    seen: set[str] = set()
-    unique: list[dict] = []
+    # --- Step 3: two-stage deduplication ------------------------------------
+
+    # Stage A: full-text MD5 hash — catches byte-identical duplicates
+    seen_ids: set[str] = set()
+    after_stage_a: list[dict] = []
     for chunk in raw_chunks:
-        if chunk["id"] not in seen:
-            seen.add(chunk["id"])
-            unique.append(chunk)
+        if chunk["id"] not in seen_ids:
+            seen_ids.add(chunk["id"])
+            after_stage_a.append(chunk)
+
+    # Stage B removed: cross-source body dedup was collapsing reviews from
+    # coursicle/ and rmp/ that shared the same text but had different metadata
+    # (grade, date, year level, major). Removing it keeps all unique-ID chunks
+    # so every professor has full coverage across both sources.
+    unique = after_stage_a
+
+    stage_a_dropped = len(raw_chunks) - len(after_stage_a)
 
     print(f"\n{'─'*50}")
-    print(f"Raw chunks       : {len(raw_chunks)}")
-    print(f"After dedup      : {len(unique)}")
+    print(f"Raw chunks  : {len(raw_chunks)}")
+    print(f"After dedup : {len(unique)}"
+          f"  (−{stage_a_dropped} exact duplicates)")
 
     # --- Step 4: clean ------------------------------------------------------
     print("\nRunning cleaning passes...")
     cleaned, report = clean_chunks(unique)
 
     _print_report(report)
-    print(f"Final chunk count        : {len(cleaned)}")
+    print(f"Final chunk count   : {len(cleaned)}")
     return cleaned
 
 
@@ -113,14 +125,7 @@ def _print_report(report: dict) -> None:
     print(f"  Truncated (flagged)     : {report.get('truncated_flagged', 0)}")
     print(f"  Short < 50w (flagged)   : {report.get('short_flagged', 0)}")
     print(f"  Missing dates filled    : {report.get('date_filled', 0)}")
-
-    cap = report.get("professor_cap", {})
-    if isinstance(cap, dict) and cap:
-        print("  Professor cap applied   :")
-        for prof, info in cap.items():
-            print(f"    {prof:<30} {info['before']:>4} → {info['after']:>4}")
-    elif isinstance(cap, str):
-        print(f"  Professor cap           : {cap}")
+    print(f"  Course codes normalised : {report.get('courses_normalised', 0)}")
     print(f"{'─'*50}")
 
 
@@ -129,14 +134,7 @@ def _print_report(report: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def save_jsonl(chunks: list[dict], out_path: Path) -> None:
-    """
-    Write chunks to a JSONL file (one JSON object per line).
-
-    JSONL is preferred over a single JSON array because:
-      - It can be streamed line-by-line without loading the whole file
-      - Most vector store SDKs accept it directly
-      - It's easy to inspect with `head`, `tail`, or `grep`
-    """
+    """Write chunks to a JSONL file (one JSON object per line)."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
         for chunk in chunks:
@@ -149,10 +147,7 @@ def ingest_to_chroma(chunks: list[dict],
                      persist_dir: str = "./chroma_db") -> None:
     """
     Embed and upsert all chunks into a local ChromaDB collection.
-
-    ChromaDB handles embedding internally using its default model.
-    `upsert` is idempotent: running this twice won't create duplicates
-    because it updates existing IDs rather than inserting new ones.
+    `upsert` is idempotent: running twice won't create duplicates.
 
     Requires:  pip install chromadb
     """
@@ -184,7 +179,7 @@ def ingest_to_chroma(chunks: list[dict],
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Chunk, clean, and ingest the AI201 professor review corpus",
+        description="Chunk, clean, and ingest the TXST professor review corpus",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

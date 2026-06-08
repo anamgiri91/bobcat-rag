@@ -1,0 +1,22 @@
+# Bobcat RAG — TXST Professor Advisor
+# Install all dependencies with:
+#   pip install -r requirements.txt
+
+# Embedding model
+sentence-transformers==3.4.1
+
+# Vector database
+chromadb>=0.6.0
+
+# LLM API (Groq)
+groq==0.15.0
+
+# Interface
+gradio>=4.0.0
+
+# ML utilities (used by cleaner.py for professor cap)
+scikit-learn>=1.3.0
+numpy>=1.26.0
+
+# Environment variables
+python-dotenv==1.0.1
