@@ -7,9 +7,12 @@
 
 ---
 
+
 ## Domain
 
-what each professor actually tests, whether they curve, what office hours are worth, and which section to take to best fit your needs at Texas State University. This domain is really useful as someone looking at classes and professors ends up spending hours reading professor reviews, grading criteria and other things which are not normally described in course catalog. This process can be simplied by a RAG pipeline with all this data, which helps a student decide which professor to study with quickly.
+This project focuses on unofficial student knowledge about Computer Science professors and courses at Texas State University. It answers questions about what each professor actually tests, whether students mention curves, how useful office hours are, how difficult the workload is, and which professor or section might best fit a student's needs.
+
+This domain is valuable because official resources like the course catalog explain what a course covers, but they do not describe what the class is actually like from a student perspective. Students often spend hours reading professor reviews, Reddit posts, grading comments, and course discussions before registration. A RAG pipeline can simplify that process by collecting those scattered sources and helping students make faster, more informed course decisions.
 
 ---
 
