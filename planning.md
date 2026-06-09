@@ -128,71 +128,36 @@ If important information is split across multiple reviews or discussion comments
 
 ## Pipeline Diagram
 
-┌─────────────────────────────────────────────┐
-│           1. Document Ingestion             │
-│---------------------------------------------│
-│ Sources:                                    │
-│ • Rate My Professors reviews                │
-│ • Reddit (r/txstate) threads                │
-│ • Coursicle reviews                         │
-│ • TXST Course Catalog                       │
-│ • TXST Faculty Page                         │
-│                                             │
-│ Tools: requests, BeautifulSoup, PRAW        │
-└─────────────────────┬───────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────┐
-│               2. Chunking                   │
-│---------------------------------------------│
-│ Strategy: Review-Level Chunking             │
-│                                             │
-│ • One review = one chunk                    │
-│ • Chunk size: 50–300 words                  │
-│ • Overlap: 0                                │
-│ • Metadata stored with each chunk:          │
-│   - Professor name                          │
-│   - Course number                           │
-│   - Source                                  │
-└─────────────────────┬───────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────┐
-│      3. Embedding + Vector Storage          │
-│---------------------------------------------│
-│ Embedding Model:                            │
-│ all-MiniLM-L6-v2                            │
-│                                             │
-│ Vector Database:                            │
-│ ChromaDB                                    │
-│                                             │
-│ Each chunk → embedding vector               │
-└─────────────────────┬───────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────┐
-│               4. Retrieval                  │
-│---------------------------------------------│
-│ User Question                               │
-│        ↓                                    │
-│ Query Embedding                             │
-│        ↓                                    │
-│ Chroma Similarity Search                    │
-│        ↓                                    │
-│ Retrieve Top-5 Most Relevant Chunks         │
-└─────────────────────┬───────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────┐
-│              5. Generation                  │
-│---------------------------------------------│
-│ Retrieved Context + User Query              │
-│                    ↓                        │
-│ OpenAI GPT Model                            │
-│                    ↓                        │
-│ Final Answer with Supporting Evidence       │
-└─────────────────────────────────────────────┘
-```
+┌---
+config:
+  layout: elk
+---
+flowchart TD
+    A[Document Ingestion] --> B[Chunking]
+    A1["<b>Sources:</b><br/>• Rate My Professors<br/>• Reddit r/txstate<br/>• Coursicle<br/>• TXST Course Catalog<br/>• TXST Faculty Page"] -.-> A
+    A2["<b>Tools:</b><br/>requests, BeautifulSoup, PRAW"] -.-> A
+    
+    B --> C[Embedding + Vector Storage]
+    B1["<b>Strategy:</b> Review-Level<br/>• One review = one chunk<br/>• Size: 50–300 words<br/>• Overlap: 0<br/>• Metadata: Professor, Course, Source"] -.-> B
+    
+    C --> D[Retrieval]
+    C1["<b>Model:</b> all-MiniLM-L6-v2<br/><b>Database:</b> ChromaDB<br/>Chunk → Embedding Vector"] -.-> C
+    
+    D --> E[Generation]
+    D1["<b>Process:</b><br/>Query → Embedding<br/>Chroma Similarity Search<br/>Top-5 Chunks Retrieved"] -.-> D
+    
+    E --> F[Answer]
+    E1["<b>Model:</b> OpenAI GPT<br/>Context + Query → Answer"] -.-> E
+    
+    F["Final Answer with<br/>Supporting Evidence"]
+    
+    classDef stageNode stroke:#818cf8,fill:#eef2ff
+    classDef detailNode stroke:#94a3b8,fill:#f1f5f9
+    classDef endNode stroke:#4ade80,fill:#f0fdf4
+    
+    class A,B,C,D,E stageNode
+    class A1,A2,B1,C1,D1,E1 detailNode
+    class F endNode
 
 
 ## AI Tool Plan
