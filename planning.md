@@ -128,37 +128,45 @@ If important information is split across multiple reviews or discussion comments
 
 ## Pipeline Diagram
 
-┌---
-config:
-  layout: elk
----
+```mermaid
 flowchart TD
-    A[Document Ingestion] --> B[Chunking]
-    A1["<b>Sources:</b><br/>• Rate My Professors<br/>• Reddit r/txstate<br/>• Coursicle<br/>• TXST Course Catalog<br/>• TXST Faculty Page"] -.-> A
-    A2["<b>Tools:</b><br/>requests, BeautifulSoup, PRAW"] -.-> A
-    
-    B --> C[Embedding + Vector Storage]
-    B1["<b>Strategy:</b> Review-Level<br/>• One review = one chunk<br/>• Size: 50–300 words<br/>• Overlap: 0<br/>• Metadata: Professor, Course, Source"] -.-> B
-    
-    C --> D[Retrieval]
-    C1["<b>Model:</b> all-MiniLM-L6-v2<br/><b>Database:</b> ChromaDB<br/>Chunk → Embedding Vector"] -.-> C
-    
-    D --> E[Generation]
-    D1["<b>Process:</b><br/>Query → Embedding<br/>Chroma Similarity Search<br/>Top-5 Chunks Retrieved"] -.-> D
-    
-    E --> F[Answer]
-    E1["<b>Model:</b> OpenAI GPT<br/>Context + Query → Answer"] -.-> E
-    
-    F["Final Answer with<br/>Supporting Evidence"]
-    
-    classDef stageNode stroke:#818cf8,fill:#eef2ff
-    classDef detailNode stroke:#94a3b8,fill:#f1f5f9
-    classDef endNode stroke:#4ade80,fill:#f0fdf4
-    
-    class A,B,C,D,E stageNode
-    class A1,A2,B1,C1,D1,E1 detailNode
-    class F endNode
+    A["📄 1. Document Ingestion<br/><br/>
+    <b>Sources:</b><br/>
+    • Rate My Professors reviews<br/>
+    • Reddit r/txstate threads<br/>
+    • Coursicle reviews<br/>
+    • TXST Course Catalog<br/>
+    • TXST Faculty Page<br/><br/>
+    <b>Tools:</b> requests, BeautifulSoup, PRAW"]
 
+    B["✂️ 2. Chunking<br/><br/>
+    <b>Strategy:</b> Review-Level Chunking<br/>
+    • One review = one chunk<br/>
+    • Chunk size: 50–300 words<br/>
+    • Overlap: 0<br/>
+    • Metadata: professor, course, source"]
+
+    C["🧠 3. Embedding + Vector Storage<br/><br/>
+    • Embedding Model: all-MiniLM-L6-v2<br/>
+    • Vector Database: ChromaDB<br/>
+    • Each chunk → embedding vector"]
+
+    D["🔎 4. Retrieval<br/><br/>
+    • User question<br/>
+    • Query embedding<br/>
+    • ChromaDB similarity search<br/>
+    • Retrieve top-5 relevant chunks"]
+
+    E["💬 5. Generation<br/><br/>
+    • Retrieved context + user query<br/>
+    • OpenAI GPT model<br/>
+    • Final answer with supporting evidence"]
+
+    A --> B --> C --> D --> E
+
+    classDef stage fill:#f8fbff,stroke:#2563eb,stroke-width:2px,color:#111827;
+    class A,B,C,D,E stage;
+```
 
 ## AI Tool Plan
 
