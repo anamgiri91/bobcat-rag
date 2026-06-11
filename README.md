@@ -6,10 +6,6 @@ This is really valuable because official university resources like course catalo
 
 ## Document Sources
 
-<!-- List every source you collected documents from.
-     Be specific: include URLs, subreddit names, forum thread titles, or file names.
-     Aim for variety — sources that together cover different subtopics or perspectives. -->
-
 | # | Source | Type | URL or file path |
 |---|--------|------|-----------------|
 | 1 | Rate My Professors — Lee Koh |  Professors — Lee KohProfessor reviews |https://www.ratemyprofessors.com/professor/56546|
